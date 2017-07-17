@@ -14,10 +14,10 @@ const createWindow = async () => {
   let scaleFactor = display.scaleFactor;
 
   mainWindow = new BrowserWindow({
-      width: display.size.width,
-      height: display.size.height,
+      width: 800,
+      height: 600,
       webPreferences: {
-          zoomFactor: 1 / scaleFactor
+          zoomFactor: 1 / scaleFactor,
       },
     });
 
