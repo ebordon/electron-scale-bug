@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, screen, ipcMain } from 'electron';
 
 let mainWindow: Electron.BrowserWindow | null;
 
@@ -14,11 +14,11 @@ const createWindow = async () => {
   let scaleFactor = display.scaleFactor;
 
   mainWindow = new BrowserWindow({
-      width: 800,
-      height: 600,
-      webPreferences: {
-          zoomFactor: 1 / scaleFactor,
-      },
+    width: display.size.width,
+    height: display.size.height,
+    webPreferences: {
+      zoomFactor: 1 / scaleFactor,
+    },
     });
 
   //deshabilita el menú superior. No funciona en Mac
@@ -28,8 +28,13 @@ const createWindow = async () => {
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   // Open the DevTools.
-  if (isDevMode) {
+  //if (isDevMode) {
     mainWindow.webContents.openDevTools();
+  //}
+
+  if (process.platform === 'win32') {
+    app.commandLine.appendSwitch('high-dpi-support', 'true')
+    app.commandLine.appendSwitch('force-device-scale-factor', '1')
   }
 
   // Emitted when the window is closed.
@@ -70,3 +75,37 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
+ipcMain.on('open-player', (event, username, token, gid) => {
+  let plataforma = process.platform;
+  console.log('Abriendo juego ' + gid + ' en so ' + plataforma);
+  //en esta variable guarda el nombre del ejecutable.
+  let exeName;
+  if (plataforma.indexOf('win') >= 0){
+    exeName = 'Cliente.exe'
+  } else {
+   if (plataforma.indexOf('linux')){
+    exeName = 'Cliente.out'
+   }
+  }
+  process.chdir(__dirname);
+  console.log(__dirname);
+  let child = require('child_process').exec;
+  //let executablePath = 'Cliente.exe';
+  let executablePath = exeName + ' "' + username + '" "' + token + '" "' + gid + '"';
+  console.log(executablePath);
+  mainWindow.hide();
+  child(executablePath, function(err, data) {
+      if(err){
+         console.error(err);
+         event.sender.send('close-player', data);
+         mainWindow.show();
+         mainWindow.focus();
+         return;
+      }
+      console.log(data.toString());
+      mainWindow.show();
+      mainWindow.focus();
+      event.sender.send('close-player', data);
+  });
+})
